@@ -1,0 +1,30 @@
+name: 'databricks_dbt'
+
+config-version: 2
+version: '0.1'
+
+profile: 'databricks_dbt'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+
+require-dbt-version: [">=1.0.0", "<2.0.0"]
+
+models:
+  +persist_docs:
+    relation: true
+    columns: true
+  databricks_dbt:
+    bronze:
+      +database: xx
+      +schema: xx
+      +materialized: table
+    silver:
+      +database: xx
+      +schema: xx
+      +materialized: table
+    gold:
+      +database: xx_{{ target.name }}
+      +schema: xx
+      +materialized: table

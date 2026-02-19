@@ -1,0 +1,35 @@
+databricks_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      host: xx
+      http_path: xx
+      catalog: xx
+      schema: xx
+      auth_type: oauth 
+      azure_client_id: "{{ env_var('CLIENT_ID') }}" 
+      azure_client_secret: "{{ env_var('CLIENT_SECRET') }}" 
+      threads: 4
+
+    qa:
+      type: databricks
+      host: xx
+      http_path: xx
+      catalog: xx
+      schema: xx
+      auth_type: oauth 
+      azure_client_id: "{{ env_var('CLIENT_ID') }}" 
+      azure_client_secret: "{{ env_var('CLIENT_SECRET') }}" 
+      threads: 4
+
+    prod:
+      type: databricks
+      host: xx
+      http_path: xx
+      catalog: xx
+      schema: xx
+      auth_type: oauth 
+      azure_client_id: "{{ env_var('CLIENT_ID') }}" 
+      azure_client_secret: "{{ env_var('CLIENT_SECRET') }}" 
+      threads: 4

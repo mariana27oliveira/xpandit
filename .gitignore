@@ -1,0 +1,8 @@
+# dbt
+logs/
+target/
+dbt_packages/
+dbt_internal_packages/
+
+# Environment
+.user.yml
