@@ -150,7 +150,6 @@ jobs:
             #--overwrite
 
   deploy-pro:
-    if: github.event_name == 'workflow_dispatch'
     name: Deploy to PRO Databricks
     runs-on: ubuntu-latest
     needs: deploy-pre
