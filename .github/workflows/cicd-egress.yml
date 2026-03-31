@@ -58,7 +58,7 @@ jobs:
               #}
             #}
   build:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_develop'
     name: Build JAR
     runs-on: ubuntu-latest
 
@@ -86,7 +86,6 @@ jobs:
           if-no-files-found: error
 
   deploy-dev:
-    if: github.event.pull_request.merged == true
     name: Deploy to DEV Databricks
     runs-on: ubuntu-latest
     needs: build
@@ -118,10 +117,10 @@ jobs:
             #--overwrite
 
   deploy-pre:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_master'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_master' && github.event.pull_request.head.ref == 'dev_develop'
     name: Deploy to PRE Databricks
     runs-on: ubuntu-latest
-    needs: build
+    needs: deploy-dev
     environment: pre
 
     env:
@@ -158,7 +157,6 @@ jobs:
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRO_TOKEN }}
-      ALLOWED_USER: ${{ secrets.PRO_APPROVER_USERNAME }}
 
     steps:
       - uses: actions/checkout@v4
