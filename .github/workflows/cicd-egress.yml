@@ -147,14 +147,26 @@ jobs:
             #"dbfs:/Volumes/aspi1/default/libs/exporter/app-pre.jar" \
             #--overwrite
 
-      - name: Create PR dev_develop → dev_master
-        uses: peter-evans/create-pull-request@v5
+      - name: Create Pull Request if none exists #Creates PR with review request, if there are no commits (differences) skips this step
+        if: steps.pr_check.outputs.result == 'null'
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: dev_master
-          head: dev_develop
-          commit-message: "Auto PR to promote dev_develop to dev_master"
-          title: "Auto PR dev_develop → dev_master"
+          github-token: ${{ secrets.GIT_TOKEN }} #Token responsible for PR creation
+          script: |
+            const source = process.env.source_branch;
+            const target = process.env.target_branch;
+
+            const compare = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: target,
+              head: source
+            });
+            if (compare.data.total_commits === 0) {
+              core.info(`No new commits between ${source} and ${target}. Skipping PR creation.`);
+              return;
+            }
+            return pr.data.number
 
   deploy-pro:
     name: Deploy to PRO Databricks
