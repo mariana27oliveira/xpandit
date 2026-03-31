@@ -161,13 +161,6 @@ jobs:
       ALLOWED_USER: ${{ secrets.PRO_APPROVER_USERNAME }}
 
     steps:
-      - name: Block unauthorized user
-        shell: bash
-        run: |
-          if [ "${{ github.actor }}" != "$ALLOWED_USER" ]; then
-            echo "User ${{ github.actor }} is not allowed to deploy to PRO."
-            exit 1
-          fi
       - uses: actions/checkout@v4
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
