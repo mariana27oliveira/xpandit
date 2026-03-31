@@ -165,6 +165,15 @@ jobs:
               core.info(`No new commits between ${source} and ${target}. Skipping PR creation.`);
               return;
             }
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Automerge ${source} → ${target}`,
+              head: source,
+              base: target,
+              body: `Pull request created automatically by workflow. Requires approval.`
+            });
+            console.log(`PR created: ${pr.data.html_url}`);
             return pr.data.number
 
   deploy-pro:
