@@ -32,4 +32,5 @@ databricks_dbt:
       auth_type: oauth 
       azure_client_id: "{{ env_var('CLIENT_ID') }}" 
       azure_client_secret: "{{ env_var('CLIENT_SECRET') }}" 
-      threads: 4 
+      threads: 4
+      
