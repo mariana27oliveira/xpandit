@@ -1,0 +1,431 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.aegon.datalake</groupId>
+    <artifactId>data-exporter-tool</artifactId>
+
+    <version>0.0.63-SNAPSHOT</version>
+
+    <name>${project.artifactId}</name>
+    <description>datalake data exporter tool</description>
+    <inceptionYear>2022</inceptionYear>
+
+
+    <properties>
+        <maven.test.skip>false</maven.test.skip>
+        <main.class>com.aegon.datalake.ExporterApp</main.class>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <encoding>UTF-8</encoding>
+        <scala.version>2.13.16</scala.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <scala.compat.version>2.13</scala.compat.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <spec2.version>4.20.0</spec2.version>
+        <scala-logging.version>3.9.5</scala-logging.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <spark.version>4.0.0</spark.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <delta.version>4.0.0</delta.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <jcommander.version>1.81</jcommander.version>
+        <hadoop.version>3.4.1</hadoop.version>
+        <hadoop-aws.version>3.4.1</hadoop-aws.version>
+        <sshj.version>0.40.0</sshj.version>
+        <bouncy_gpg.version>2.3.0</bouncy_gpg.version>
+        <!--<mongo-spark-connector.version>11.0.0</mongo-spark-connector.version> <!- https://docs.mongodb.com/spark-connector/current/ -->
+        <!--<mongo-scala.version>4.0.5</mongo-scala.version> <!- https://www.mongodb.com/docs/drivers/scala/ -->
+        <zookeper.version>3.7.2</zookeper.version>
+        <avro.version>1.11.4</avro.version>
+        <okhttp3.version>4.11.0</okhttp3.version>
+        <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
+        <typesafe-config.version>1.4.3</typesafe-config.version>
+        <!--<dbutils.api.version>0.0.5</dbutils.api.version>-->
+        <!-- Tests -->
+        <mockito.version>3.12.4</mockito.version>
+        <junit.version>4.13.2</junit.version>
+        <scalatest.version>3.2.19</scalatest.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <scalatest-maven-plugin.version>2.0.2</scalatest-maven-plugin.version>
+        <scala-maven-plugin.version>4.9.5</scala-maven-plugin.version>
+        <jackson.core.version>2.18.2</jackson.core.version> <!-- LTS 17.3 - https://docs.databricks.com/en/release-notes/runtime/17.3lts.html -->
+        <spark-fast-tests.version>1.3.0</spark-fast-tests.version>
+        <log4j.version>2.24.3</log4j.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-reflect</artifactId>
+            <version>${scala.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+
+        <!-- log dependency -->
+        <dependency>
+            <groupId>com.typesafe.scala-logging</groupId>
+            <artifactId>scala-logging_${scala.compat.version}</artifactId>
+            <version>${scala-logging.version}</version>
+        </dependency>
+
+        <!-- Spark dependencies -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-catalyst_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-tags_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Delta dependencies -->
+        <dependency>
+            <groupId>io.delta</groupId>
+            <artifactId>delta-spark_${scala.compat.version}</artifactId>
+            <version>${delta.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+
+
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-azure</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>${jcommander.version}</version>
+        </dependency>
+
+
+        <!-- SFTP library dependency -->
+        <dependency>
+            <groupId>com.hierynomus</groupId>
+            <artifactId>sshj</artifactId>
+            <version>${sshj.version}</version>
+        </dependency>
+
+        <!-- Encrypter dependencies -->
+        <dependency>
+            <groupId>name.neuhalfen.projects.crypto.bouncycastle.openpgp</groupId>
+            <artifactId>bouncy-gpg</artifactId>
+            <version>${bouncy_gpg.version}</version>
+        </dependency>
+
+        <!-- MongoDB Dependecies -->
+
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>${zookeper.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.core.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.core.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp3.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <version>${hadoop-aws.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+            <version>${log4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--  config dependency  -->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>${typesafe-config.version}</version>
+        </dependency>
+
+        <!--  Databricks Utils  -->
+        <dependency>
+            <groupId>com.databricks</groupId>
+            <artifactId>databricks-dbutils-scala_2.13</artifactId>
+            <version>0.1.4</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>com.databricks</groupId>
+            <artifactId>databricks-sdk-java</artifactId>
+            <version>0.29.0</version>
+        </dependency>
+
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.compat.version}</artifactId>
+            <version>${scalatest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.specs2</groupId>
+            <artifactId>specs2-core_${scala.compat.version}</artifactId>
+            <version>${spec2.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.specs2</groupId>
+            <artifactId>specs2-junit_${scala.compat.version}</artifactId>
+            <version>${spec2.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.mrpowers</groupId>
+            <artifactId>spark-fast-tests_${scala.compat.version}</artifactId>
+            <version>${spark-fast-tests.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
+
+        <plugins>
+
+
+            <!-- UNIT TESTS (Surefire) -->
+
+
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>2.0.2</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Apenas testes de integração -->
+                            <includes>
+                                <include>**/*IT.scala</include>
+                                <include>**/*IT.java</include>
+                                <include>**/*End2EndTest.scala</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>scala-compile-first</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-dependencyfile</arg>
+                                <arg>${project.build.directory}/.scala_dependencies</arg>
+                            </args>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>scala-test-compile</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven-shade-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shaded</shadedClassifierName>
+
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.aegon.datalake.ExporterApp</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>local</id>
+            <dependencies>
+
+                <!-- Spark core -->
+                <dependency>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-core_${scala.compat.version}</artifactId>
+                    <version>${spark.version}</version>
+                </dependency>
+
+                <!-- Spark SQL -->
+                <dependency>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-sql_${scala.compat.version}</artifactId>
+                    <version>${spark.version}</version>
+                </dependency>
+
+                <!-- Spark Catalyst -->
+                <dependency>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-catalyst_${scala.compat.version}</artifactId>
+                    <version>${spark.version}</version>
+                </dependency>
+
+                <!-- Spark Tags -->
+                <dependency>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-tags_${scala.compat.version}</artifactId>
+                    <version>${spark.version}</version>
+                </dependency>
+
+                <!-- Delta Lake -->
+                <dependency>
+                    <groupId>io.delta</groupId>
+                    <artifactId>delta-spark_${scala.compat.version}</artifactId>
+                    <version>${delta.version}</version>
+                </dependency>
+
+                <!-- Jackson -->
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                    <version>${jackson.core.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                    <version>${jackson.core.version}</version>
+                </dependency>
+
+                <!-- Logging backend -->
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j2-impl</artifactId>
+                    <version>${log4j.version}</version>
+                </dependency>
+
+            </dependencies>
+        </profile>
+    </profiles>
+</project>
