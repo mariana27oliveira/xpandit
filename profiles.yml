@@ -33,4 +33,3 @@ databricks_dbt:
       azure_client_id: "{{ env_var('CLIENT_ID') }}" 
       azure_client_secret: "{{ env_var('CLIENT_SECRET') }}" 
       threads: 4
-      
