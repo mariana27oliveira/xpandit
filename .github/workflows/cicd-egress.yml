@@ -158,7 +158,6 @@ jobs:
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRO_TOKEN }}
-      ALLOWED_USER: ${{ secrets.PRO_APPROVER_USERNAME }}
 
     steps:
       - uses: actions/checkout@v4
