@@ -103,19 +103,19 @@ jobs:
         with:
           name: jar-dev-${{ github.sha }}
           path: target
-      - run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-      - run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_develop
-      - run: |
-          mkdir -p deploy-config
-          cp config/*.conf deploy-config/ 2>/dev/null || true
-          cp config/*.properties deploy-config/ 2>/dev/null || true
-          databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
-      - run: |
-          JAR_FILE=$(ls target/*.jar | head -n 1)
-          JAR_NAME=$(basename "$JAR_FILE")
-          databricks fs cp "$JAR_FILE" \
-            "dbfs:/Volumes/aspd1/default/libs/exporter/app-dev.jar" \
-            --overwrite
+      #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+      #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_develop
+      #- run: |
+          #mkdir -p deploy-config
+          #cp config/*.conf deploy-config/ 2>/dev/null || true
+          #cp config/*.properties deploy-config/ 2>/dev/null || true
+          #databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
+      #- run: |
+          #JAR_FILE=$(ls target/*.jar | head -n 1)
+          #JAR_NAME=$(basename "$JAR_FILE")
+          #databricks fs cp "$JAR_FILE" \
+            #"dbfs:/Volumes/aspd1/default/libs/exporter/app-dev.jar" \
+            #--overwrite
 
   deploy-pre:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_master'
@@ -135,19 +135,19 @@ jobs:
         with:
           name: jar-dev-${{ github.sha }}
           path: target
-      - run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-      - run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
-      - run: |
-          mkdir -p deploy-config
-          cp config/*.conf deploy-config/ 2>/dev/null || true
-          cp config/*.properties deploy-config/ 2>/dev/null || true
-          databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
-      - run: |
-          JAR_FILE=$(ls target/*.jar | head -n 1)
-          JAR_NAME=$(basename "$JAR_FILE")
-          databricks fs cp "$JAR_FILE" \
-            "dbfs:/Volumes/aspi1/default/libs/exporter/app-pre.jar" \
-            --overwrite
+      #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+      #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
+      #- run: |
+          #mkdir -p deploy-config
+          #cp config/*.conf deploy-config/ 2>/dev/null || true
+          #cp config/*.properties deploy-config/ 2>/dev/null || true
+          #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
+      #- run: |
+          #JAR_FILE=$(ls target/*.jar | head -n 1)
+          #JAR_NAME=$(basename "$JAR_FILE")
+          #databricks fs cp "$JAR_FILE" \
+            #"dbfs:/Volumes/aspi1/default/libs/exporter/app-pre.jar" \
+            #--overwrite
 
   deploy-pro:
     if: github.event_name == 'workflow_dispatch'
@@ -175,16 +175,16 @@ jobs:
         with:
           name: jar-dev-${{ github.sha }}
           path: target
-      - run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-      - run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
-      - run: |
-          mkdir -p deploy-config
-          cp config/*.conf deploy-config/ 2>/dev/null || true
-          cp config/*.properties deploy-config/ 2>/dev/null || true
-          databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
-      - run: |
-          JAR_FILE=$(ls target/*.jar | head -n 1)
-          JAR_NAME=$(basename "$JAR_FILE")
-          databricks fs cp "$JAR_FILE" \
-            "dbfs:/Volumes/aspi1/default/libs/exporter/app-pro.jar" \
-            --overwrite
+      #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+      #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
+      #- run: |
+          #mkdir -p deploy-config
+          #cp config/*.conf deploy-config/ 2>/dev/null || true
+          #cp config/*.properties deploy-config/ 2>/dev/null || true
+          #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
+      #- run: |
+          #JAR_FILE=$(ls target/*.jar | head -n 1)
+          #JAR_NAME=$(basename "$JAR_FILE")
+          #databricks fs cp "$JAR_FILE" \
+            #"dbfs:/Volumes/aspi1/default/libs/exporter/app-pro.jar" \
+            #--overwrite
