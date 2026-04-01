@@ -13,46 +13,12 @@ on:
         required: true
         default: dev_master
         type: string
-
+ 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  #request-reviewer-for-master-pr:
-    #name: Request reviewer on PR to dev_master
-    #if: >
-      #github.event_name == 'pull_request' &&
-      #github.event.pull_request.base.ref == 'dev_master' &&
-      #github.event.action != 'closed' &&
-      #github.event.pull_request.draft == false
-    #runs-on: ubuntu_latest
-
-    #steps:
-      #- name: Request specific reviewer
-        #uses: actions/github-script@v7
-        #env:
-          #REVIEWER_USERNAME: ${{ secrets.PRO_APPROVER_USERNAME }}
-        #with:
-          #github-token: ${{ secrets.GITHUB_TOKEN }}
-          #script: |
-            #const reviewer = process.env.REVIEWER_USERNAME;
-            
-            #try {
-              #await github.rest.pulls.requestReviewers({
-                #owner: context.repo.owner,
-                #repo: context.repo.repo,
-                #pull_number: context.payload.pull_request.number,
-                #reviewers: [reviewer]
-              #});
-              #core.info('Reviewer requested: ${reviewer}');
-            #} catch (error) {
-              #if (error.status === 422) {
-                #core.info('Reviewer ${reviewer} already requested, already reviewed, or cannot be requested.');
-              #} else {
-                #throw error;
-              #}
-            #}
   build:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_develop'
     name: Build JAR
@@ -162,12 +128,18 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Automerge ${source} → ${target}`,
+              title: `Automerge ${source} - ${target}`,
               head: source,
               base: target,
               body: `Pull request created automatically by workflow. Requires approval.`
             });
             console.log(`PR created: ${pr.data.html_url}`);
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              reviewers: ${{ secrets.PRO_APPROVER_USERNAME }}
+            });            
             return pr.data.number
 
   deploy-pre:
