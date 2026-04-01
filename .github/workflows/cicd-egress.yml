@@ -11,7 +11,7 @@ on:
       - opened
       - reopened
       - ready_for_review
-      - closed 
+      - closed
   workflow_dispatch:
     inputs:
       ref_to_deploy:
@@ -121,7 +121,6 @@ jobs:
   create-pr-to-master: #Creates PR to master if not exists
     name: Create PR to master
     runs-on: ubuntu-24.04
-    environment: pre
     needs: deploy-dev
     permissions:
       contents: write
