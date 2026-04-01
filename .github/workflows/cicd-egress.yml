@@ -138,7 +138,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr.data.number,
-              reviewers: ${{ secrets.PRO_APPROVER_USERNAME }}
+              reviewers: ['${{ secrets.PRO_APPROVER_USERNAME }}']
             });            
             return pr.data.number
 
