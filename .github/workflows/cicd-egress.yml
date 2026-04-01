@@ -176,11 +176,11 @@ jobs:
             });
             console.log(`PR created: ${pr.data.html_url}`);
             return pr.data.number
- 
-  merge-to-master: #Runs only if previous job is executed
-    name: Merge to master
-    runs-on: ubuntu-24.04
-    #Executes if PR is approved and branches are valid
+
+  deploy-pre:
+    name: Merge to Master and Deploy to PRE Databricks
+    runs-on: ubuntu-latest
+    needs: create-pr-to-master
     if: |
       (
         (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
@@ -189,9 +189,13 @@ jobs:
       (
         (github.event.pull_request.base.ref == 'dev_master' && github.event.pull_request.head.ref == 'dev_develop')
       )
- 
     permissions:
       contents: write
+
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRE_TOKEN }}
+
     steps:
       - name: Checkout target branch
         uses: actions/checkout@v4
@@ -208,17 +212,6 @@ jobs:
           git merge -X theirs origin/dev_develop --allow-unrelated-histories --no-edit
           git push origin dev_master
 
-  deploy-pre:
-    name: Deploy to PRE Databricks
-    runs-on: ubuntu-latest
-    needs: merge-to-master
-
-    env:
-      DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
-      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRE_TOKEN }}
-
-    steps:
-      - uses: actions/checkout@v4
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
