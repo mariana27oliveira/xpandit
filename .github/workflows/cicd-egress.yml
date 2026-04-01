@@ -11,7 +11,7 @@ on:
       - opened
       - reopened
       - ready_for_review
-      - closed
+      - closed 
   workflow_dispatch:
     inputs:
       ref_to_deploy:
