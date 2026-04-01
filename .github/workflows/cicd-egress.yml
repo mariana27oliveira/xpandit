@@ -182,14 +182,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: pre
     needs: create-pr-to-master
-    if: |
-      (
-        (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
-        (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
-      ) &&
-      (
-        (github.event.pull_request.base.ref == 'dev_master' && github.event.pull_request.head.ref == 'dev_develop')
-      )
     permissions:
       contents: write
 
@@ -198,6 +190,47 @@ jobs:
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRE_TOKEN }}
 
     steps:
+      - name: Validate PR dev_develop > dev_master
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const source = "dev_develop";
+            const target = "dev_master";
+       
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              head: `${context.repo.owner}:${source}`,
+              base: target
+            });
+       
+            if (prs.data.length === 0) {
+              core.setFailed("No PR found from dev_develop to dev_master.");
+              return;
+            }
+       
+            const pr = prs.data[0];
+       
+            // check merged
+            const isMerged = pr.state === "closed" && pr.merged_at !== null;
+       
+            // check approvals
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+       
+            const isApproved = reviews.data.some(r => r.state === "APPROVED");
+       
+            if (!isApproved && !isMerged) {
+              core.setFailed("PR is neither approved nor merged. Blocking deployment.");
+            } else {
+              core.info(`PR validation passed. Approved: ${isApproved}, Merged: ${isMerged}`);
+            }
+    
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
