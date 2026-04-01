@@ -162,12 +162,18 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Automerge ${source} → ${target}`,
+              title: `Automerge ${source} - ${target}`,
               head: source,
               base: target,
               body: `Pull request created automatically by workflow. Requires approval.`
             });
             console.log(`PR created: ${pr.data.html_url}`);
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              reviewers: ${{ secrets.PRO_APPROVER_USERNAME }}
+            });            
             return pr.data.number
 
   deploy-pre:
