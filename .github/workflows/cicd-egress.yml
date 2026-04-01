@@ -1,12 +1,9 @@
 name: cicd-egress
 
 on:
-  pull_request_review:
-    types: [submitted]
   pull_request:
     branches:
       - dev_develop
-      - dev_master
     types:
       - opened
       - reopened
