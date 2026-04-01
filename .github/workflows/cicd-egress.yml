@@ -119,6 +119,7 @@ jobs:
             #--overwrite
 
   create-pr-to-master: #Creates PR to master if not exists
+    name: Create PR to master
     runs-on: ubuntu-24.04
     environment: pre
     needs: deploy-dev
@@ -177,7 +178,7 @@ jobs:
             return pr.data.number
  
   merge-to-master: #Runs only if previous job is executed
-    needs: create-pr-to-master 
+    name: Merge to master
     runs-on: ubuntu-24.04
     #Executes if PR is approved and branches are valid
     if: |
