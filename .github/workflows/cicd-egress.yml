@@ -180,6 +180,7 @@ jobs:
   deploy-pre:
     name: Merge to Master and Deploy to PRE Databricks
     runs-on: ubuntu-latest
+    environment: pre
     needs: create-pr-to-master
     if: |
       (
