@@ -121,6 +121,7 @@ jobs:
   create-pr-to-master: #Creates PR to master if not exists
     runs-on: ubuntu-24.04
     environment: pre
+    needs: deploy-dev
     permissions:
       contents: write
       pull-requests: write
