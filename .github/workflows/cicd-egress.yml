@@ -7,7 +7,7 @@ on:
     types:
       - closed
   workflow_dispatch:
-    inputs:
+    inputs: 
       ref_to_deploy:
         description: "Branch or tag to deploy to PRO"
         required: true
