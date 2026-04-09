@@ -84,58 +84,58 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
-      - name: Cleanup old versions (keep 3 latest)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const packageName = "com.aegon.datalake.data-exporter-tool";
-            const packageType = "maven";
-            const org = context.repo.owner;
+      #- name: Cleanup old versions (keep 3 latest)
+        #uses: actions/github-script@v7
+        #with:
+          #github-token: ${{ secrets.GITHUB_TOKEN }}
+          #script: |
+            #const packageName = "com.aegon.datalake.data-exporter-tool";
+            #const packageType = "maven";
+            #const org = context.repo.owner;
        
-            // Reads all the versions in package
-            const versionsResponse = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-              package_type: packageType,
-              package_name: packageName,
-              org: org,
-              per_page: 100,
-            });
+            #// Reads all the versions in package
+            #const versionsResponse = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+              #package_type: packageType,
+              #package_name: packageName,
+              #org: org,
+              #per_page: 100,
+            #});
        
-            const allVersions = versionsResponse.data;
+            #const allVersions = versionsResponse.data;
        
-            // Compares the versions number
-            const semverCompare = (a, b) => {
-              const parseVersion = v => v.name.split('.').map(n => parseInt(n.replace(/\D.*$/, '')) || 0);
-              const pa = parseVersion(a);
-              const pb = parseVersion(b);
-              for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-                const na = pa[i] || 0;
-                const nb = pb[i] || 0;
-                if (na !== nb) return nb - na; // Descendente
-              }
-              return 0;
-            };
+            #// Compares the versions number
+            #const semverCompare = (a, b) => {
+              #const parseVersion = v => v.name.split('.').map(n => parseInt(n.replace(/\D.*$/, '')) || 0);
+              #const pa = parseVersion(a);
+              #const pb = parseVersion(b);
+              #for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                #const na = pa[i] || 0;
+                #const nb = pb[i] || 0;
+                #if (na !== nb) return nb - na; // Descendente
+              #}
+              #return 0;
+            #};
        
-            // Orders the versions
-            allVersions.sort(semverCompare);
+            #// Orders the versions
+            #allVersions.sort(semverCompare);
        
-            // Keeps only the most 3 recent versions
-            const toDelete = allVersions.slice(2);
+            #// Keeps only the most 3 recent versions
+            #const toDelete = allVersions.slice(2);
        
-            for (const version of toDelete) {
-              console.log(`Deleting old version: ${version.name}`);
-              await github.request(
-                "DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}",
-                {
-                  org: org,
-                  package_type: packageType,
-                  package_name: packageName,
-                  package_version_id: version.id,
-                }
-              );
-            }
+            #for (const version of toDelete) {
+              #console.log(`Deleting old version: ${version.name}`);
+              #await github.request(
+                #"DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}",
+                #{
+                  #org: org,
+                  #package_type: packageType,
+                  #package_name: packageName,
+                  #package_version_id: version.id,
+                #}
+              #);
+            #}
        
-            console.log(`Kept versions: ${allVersions.slice(0,3).map(v => v.name).join(', ')}`);
+            #console.log(`Kept versions: ${allVersions.slice(0,3).map(v => v.name).join(', ')}`);
 
       - name: Get project version
         id: get_version
