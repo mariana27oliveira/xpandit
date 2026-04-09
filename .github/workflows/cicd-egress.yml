@@ -193,11 +193,11 @@ jobs:
           EOF
       - uses: actions/checkout@v4
       - name: Download JAR from GitHub Packages
-        #run: |
-          #mvn dependency:copy \
-            #-Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
-            #-DoutputDirectory=target \
-            #-DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex            
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex            
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_develop
       #- run: |
@@ -205,9 +205,9 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
-      #- run: |
-          #VERSION=${{needs.build.outputs.version}}
-          #echo "Deploying version: ${VERSION}"
+      - run: |
+          VERSION=${{needs.build.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
@@ -391,11 +391,11 @@ jobs:
 
       - uses: actions/checkout@v4
       - name: Download same JAR from GitHub Packages
-        #run: |
-          #mvn dependency:copy \
-            #-Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
-            #-DoutputDirectory=target \
-            #-DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
@@ -403,9 +403,9 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
-      #- run: |
-          #VERSION=${{needs.create-pr-to-master.outputs.version}}
-          #echo "Deploying version: ${VERSION}"
+      - run: |
+          VERSION=${{needs.create-pr-to-master.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
@@ -463,11 +463,11 @@ jobs:
           EOF
       - uses: actions/checkout@v4
       - name: Download same JAR from GitHub Packages
-        #run: |
-          #mvn dependency:copy \
-            #-Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
-            #-DoutputDirectory=target \
-            #-DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
@@ -475,9 +475,9 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
-      #- run: |
-          #VERSION=${{needs.deploy-pre.outputs.version}}
-          #echo "Deploying version: ${VERSION}"
+      - run: |
+          VERSION=${{needs.deploy-pre.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
