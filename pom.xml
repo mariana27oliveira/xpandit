@@ -3,12 +3,19 @@
     <groupId>com.aegon.datalake</groupId>
     <artifactId>data-exporter-tool</artifactId>
 
-    <version>0.0.63-SNAPSHOT</version>
+    <version>1.0.3-SNAPSHOT</version>
 
     <name>${project.artifactId}</name>
     <description>datalake data exporter tool</description>
     <inceptionYear>2022</inceptionYear>
 
+<distributionManagement>
+    <repository>
+        <id>github</id>
+        <name>GitHub Packages</name>
+        <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
+    </repository>
+</distributionManagement>
 
     <properties>
         <maven.test.skip>false</maven.test.skip>

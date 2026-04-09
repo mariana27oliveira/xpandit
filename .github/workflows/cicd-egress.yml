@@ -17,46 +17,15 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  packages: write
 
 jobs:
-  #request-reviewer-for-master-pr:
-    #name: Request reviewer on PR to dev_master
-    #if: >
-      #github.event_name == 'pull_request' &&
-      #github.event.pull_request.base.ref == 'dev_master' &&
-      #github.event.action != 'closed' &&
-      #github.event.pull_request.draft == false
-    #runs-on: ubuntu_latest
-
-    #steps:
-      #- name: Request specific reviewer
-        #uses: actions/github-script@v7
-        #env:
-          #REVIEWER_USERNAME: ${{ secrets.PRO_APPROVER_USERNAME }}
-        #with:
-          #github-token: ${{ secrets.GITHUB_TOKEN }}
-          #script: |
-            #const reviewer = process.env.REVIEWER_USERNAME;
-            
-            #try {
-              #await github.rest.pulls.requestReviewers({
-                #owner: context.repo.owner,
-                #repo: context.repo.repo,
-                #pull_number: context.payload.pull_request.number,
-                #reviewers: [reviewer]
-              #});
-              #core.info('Reviewer requested: ${reviewer}');
-            #} catch (error) {
-              #if (error.status === 422) {
-                #core.info('Reviewer ${reviewer} already requested, already reviewed, or cannot be requested.');
-              #} else {
-                #throw error;
-              #}
-            #}
   build:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_develop'
     name: Build JAR
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
 
     steps:
       - name: Checkout merged commit
@@ -74,30 +43,161 @@ jobs:
       - name: Build package
         run: mvn -B clean package -DskipTests
 
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: jar-dev-${{ github.sha }}
-          path: target/*.jar
-          if-no-files-found: error
+      - name: Set up Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GIT_TOKEN }}</password>
+              </server>
+            </servers>
+
+            <profiles>
+              <profile>
+                <id>github</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+
+            <activeProfiles>
+              <activeProfile>github</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+      - name: Publish JAR to GitHub Packages
+        run: mvn deploy -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+      #- name: Cleanup old versions (keep 3 latest)
+        #uses: actions/github-script@v7
+        #with:
+          #github-token: ${{ secrets.GITHUB_TOKEN }}
+          #script: |
+            #const packageName = "com.aegon.datalake.data-exporter-tool";
+            #const packageType = "maven";
+            #const org = context.repo.owner;
+       
+            #// Reads all the versions in package
+            #const versionsResponse = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+              #package_type: packageType,
+              #package_name: packageName,
+              #org: org,
+              #per_page: 100,
+            #});
+       
+            #const allVersions = versionsResponse.data;
+       
+            #// Compares the versions number
+            #const semverCompare = (a, b) => {
+              #const parseVersion = v => v.name.split('.').map(n => parseInt(n.replace(/\D.*$/, '')) || 0);
+              #const pa = parseVersion(a);
+              #const pb = parseVersion(b);
+              #for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                #const na = pa[i] || 0;
+                #const nb = pb[i] || 0;
+                #if (na !== nb) return nb - na; // Descendente
+              #}
+              #return 0;
+            #};
+       
+            #// Orders the versions
+            #allVersions.sort(semverCompare);
+       
+            #// Keeps only the most 3 recent versions
+            #const toDelete = allVersions.slice(2);
+       
+            #for (const version of toDelete) {
+              #console.log(`Deleting old version: ${version.name}`);
+              #await github.request(
+                #"DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}",
+                #{
+                  #org: org,
+                  #package_type: packageType,
+                  #package_name: packageName,
+                  #package_version_id: version.id,
+                #}
+              #);
+            #}
+       
+            #console.log(`Kept versions: ${allVersions.slice(0,3).map(v => v.name).join(', ')}`);
+
+      - name: Get project version
+        id: get_version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
 
   deploy-dev:
     name: Deploy to DEV Databricks
     runs-on: ubuntu-latest
     needs: build
     environment: dev
+    outputs:
+      version: ${{ needs.build.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_DEV_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DEV_TOKEN }}
 
     steps:
+      - name: Set up Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GIT_TOKEN }}</password>
+              </server>
+            </servers>
+
+            <profiles>
+              <profile>
+                <id>github</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+
+            <activeProfiles>
+              <activeProfile>github</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
       - uses: actions/checkout@v4
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jar-dev-${{ github.sha }}
-          path: target
+      - name: Download JAR from GitHub Packages
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit            
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_develop
       #- run: |
@@ -105,7 +205,9 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
-      #- run: |
+      - run: |
+          VERSION=${{needs.build.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
@@ -119,6 +221,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      version: ${{ needs.deploy-dev.outputs.version }}
     env:
       GIT_TOKEN: ${{ secrets.GIT_TOKEN }} #Token responsible for creating PR
     steps: 
@@ -162,12 +266,18 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Automerge ${source} → ${target}`,
+              title: `Automerge ${source} - ${target}`,
               head: source,
               base: target,
               body: `Pull request created automatically by workflow. Requires approval.`
             });
             console.log(`PR created: ${pr.data.html_url}`);
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              reviewers: ['${{ secrets.PRO_APPROVER_USERNAME }}']
+            });            
             return pr.data.number
 
   deploy-pre:
@@ -177,6 +287,9 @@ jobs:
     needs: create-pr-to-master
     permissions:
       contents: write
+      pull-requests: read
+    outputs:
+      version: ${{ needs.create-pr-to-master.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
@@ -239,11 +352,50 @@ jobs:
           git merge -X theirs origin/dev_develop --allow-unrelated-histories --no-edit
           git push origin dev_master
 
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jar-dev-${{ github.sha }}
-          path: target
+      - name: Set up Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GIT_TOKEN }}</password>
+              </server>
+            </servers>
+
+            <profiles>
+              <profile>
+                <id>github</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+
+            <activeProfiles>
+              <activeProfile>github</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+
+      - uses: actions/checkout@v4
+      - name: Download same JAR from GitHub Packages
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
@@ -251,11 +403,13 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
-      #- run: |
+      - run: |
+          VERSION=${{needs.create-pr-to-master.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
-            #"dbfs:/Volumes/aspi1/default/libs/exporter/app-pre.jar" \
+            #"dbfs:/Volumes/aspd1/default/libs/exporter/app-dev.jar" \
             #--overwrite
 
   deploy-pro:
@@ -263,18 +417,57 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-pre
     environment: pro
+    outputs:
+      version: ${{ needs.deploy-pre.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PRO_TOKEN }}
 
     steps:
+      - name: Set up Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GIT_TOKEN }}</password>
+              </server>
+            </servers>
+
+            <profiles>
+              <profile>
+                <id>github</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+
+            <activeProfiles>
+              <activeProfile>github</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
       - uses: actions/checkout@v4
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jar-dev-${{ github.sha }}
-          path: target
+      - name: Download same JAR from GitHub Packages
+        run: |
+          mvn dependency:copy \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
+            -DoutputDirectory=target \
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
@@ -282,9 +475,11 @@ jobs:
           #cp config/*.conf deploy-config/ 2>/dev/null || true
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
-      #- run: |
+      - run: |
+          VERSION=${{needs.deploy-pre.outputs.version}}
+          echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
           #databricks fs cp "$JAR_FILE" \
-            #"dbfs:/Volumes/aspi1/default/libs/exporter/app-pro.jar" \
+            #"dbfs:/Volumes/aspd1/default/libs/exporter/app-dev.jar" \
             #--overwrite
