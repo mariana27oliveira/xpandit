@@ -3,7 +3,7 @@
     <groupId>com.aegon.datalake</groupId>
     <artifactId>data-exporter-tool</artifactId>
 
-    <version>1.0.3-SNAPSHOT</version>
+    <version>1.0.4-SNAPSHOT</version>
 
     <name>${project.artifactId}</name>
     <description>datalake data exporter tool</description>
