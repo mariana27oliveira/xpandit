@@ -8,11 +8,12 @@ on:
       - closed
   workflow_dispatch:
     inputs:
-      ref_to_deploy:
-        description: "Branch or tag to deploy to PRO"
-        required: true
-        default: dev_master
+      version_to_deploy:
+        description: "Versão para deploy/rollback (deixe vazia para build normal)"
+        required: false
+        default: ""
         type: string
+ 
  
 permissions:
   contents: read
@@ -28,10 +29,18 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
 
     steps:
-      - name: Checkout merged commit
+      - name: Determine version
+        id: version_check
+        run: |
+          if [ -z "${{ github.event.inputs.version_to_deploy }}" ]; then
+            echo "build_required=true" >> $GITHUB_OUTPUT
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "build_required=false" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -41,6 +50,7 @@ jobs:
           cache: "maven"
 
       - name: Build package
+        if: steps.version_check.outputs.build_required == 'true'
         run: mvn -B clean package -DskipTests
 
       - name: Set up Maven settings.xml
@@ -139,8 +149,8 @@ jobs:
 
       - name: Get project version
         id: get_version
+        if: steps.version_check.outputs.build_required == 'true'
         run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
-
 
   deploy-dev:
     name: Deploy to DEV Databricks
