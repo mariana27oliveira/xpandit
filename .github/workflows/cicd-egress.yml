@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version_to_deploy:
-        description: "Versão para deploy/rollback (deixe vazia para build normal)"
+        description: "Version to deploy/rollback (in case of rollback)"
         required: false
         default: ""
         type: string
