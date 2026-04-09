@@ -62,7 +62,7 @@ jobs:
                 <repositories>
                   <repository>
                     <id>github</id>
-                    <url>https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex</url>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
                     <releases>
                       <enabled>true</enabled>
                     </releases>
@@ -174,7 +174,7 @@ jobs:
                 <repositories>
                   <repository>
                     <id>github</id>
-                    <url>https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex</url>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
                     <releases>
                       <enabled>true</enabled>
                     </releases>
@@ -197,7 +197,7 @@ jobs:
           mvn dependency:copy \
             -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
             -DoutputDirectory=target \
-            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex            
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit            
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_develop
       #- run: |
@@ -371,7 +371,7 @@ jobs:
                 <repositories>
                   <repository>
                     <id>github</id>
-                    <url>https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex</url>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
                     <releases>
                       <enabled>true</enabled>
                     </releases>
@@ -395,7 +395,7 @@ jobs:
           mvn dependency:copy \
             -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
             -DoutputDirectory=target \
-            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
@@ -444,7 +444,7 @@ jobs:
                 <repositories>
                   <repository>
                     <id>github</id>
-                    <url>https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex</url>
+                    <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
                     <releases>
                       <enabled>true</enabled>
                     </releases>
@@ -467,7 +467,7 @@ jobs:
           mvn dependency:copy \
             -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
             -DoutputDirectory=target \
-            -DremoteRepositories=github::default::https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex
+            -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
       #- run: databricks repos update /Shared/asp-cldtlk-lkdaex --branch dev_master
       #- run: |
