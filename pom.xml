@@ -13,7 +13,7 @@
     <repository>
         <id>github</id>
         <name>GitHub Packages</name>
-        <url>https://maven.pkg.github.com/santander-group-asp-gln/asp-cldtlk-lkdaex</url>
+        <url>https://maven.pkg.github.com/mariana27oliveira/xpandit</url>
     </repository>
 </distributionManagement>
 
