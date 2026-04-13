@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version_to_deploy:
-        description: "Versão para deploy/rollback (deixe vazia para build normal)"
+        description: "Version to deploy/rollback (in case of rollback)"
         required: false
         default: ""
         type: string
@@ -21,8 +21,27 @@ permissions:
   packages: write
 
 jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+      do_build: ${{ steps.set.outputs.do_build }}
+
+    steps:
+      - name: Decide mode
+        id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
+            echo "do_build=false" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
+          else
+            echo "do_build=true" >> $GITHUB_OUTPUT
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
+
   build:
-    if: (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_develop') || github.event_name == 'workflow_dispatch'
+    needs: resolve-version
+    if: needs.resolve-version.outputs.do_build == 'true'
     name: Build JAR
     runs-on: ubuntu-latest
     outputs:
@@ -152,13 +171,28 @@ jobs:
         if: steps.version_check.outputs.build_required == 'true'
         run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
 
+  final-version:
+    runs-on: ubuntu-latest
+    needs: [build, resolve-version]
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+    steps:
+      - name: Decide final version
+        id: set
+        run: |
+          if [ "${{ needs.resolve-version.outputs.do_build }}" = "false" ]; then
+            echo "version=${{ needs.resolve-version.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+  
   deploy-dev:
     name: Deploy to DEV Databricks
     runs-on: ubuntu-latest
-    needs: build
+    needs: final-version
     environment: dev
     outputs:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.final-version.outputs.version}}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_DEV_HOST }}
@@ -205,7 +239,7 @@ jobs:
       - name: Download JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit            
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -216,7 +250,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.build.outputs.version}}
+          VERSION=${{needs.final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
@@ -232,7 +266,7 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      version: ${{ needs.deploy-dev.outputs.version }}
+      version: ${{ needs.final-version.outputs.version }}
     env:
       GIT_TOKEN: ${{ secrets.GIT_TOKEN }} #Token responsible for creating PR
     steps: 
@@ -299,7 +333,7 @@ jobs:
       contents: write
       pull-requests: read
     outputs:
-      version: ${{ needs.create-pr-to-master.outputs.version }}
+      version: ${{ needs.final-version.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
@@ -403,7 +437,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -414,7 +448,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.create-pr-to-master.outputs.version}}
+          VERSION=${{needs.final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
@@ -428,7 +462,7 @@ jobs:
     needs: deploy-pre
     environment: pro
     outputs:
-      version: ${{ needs.deploy-pre.outputs.version }}
+      version: ${{ needs.final-version.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
@@ -475,7 +509,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -486,7 +520,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.deploy-pre.outputs.version}}
+          VERSION=${{needs.final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
