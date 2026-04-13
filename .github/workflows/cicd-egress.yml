@@ -21,8 +21,27 @@ permissions:
   packages: write
 
 jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+      do_build: ${{ steps.set.outputs.do_build }}
+
+    steps:
+      - name: Decide mode
+        id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
+            echo "do_build=false" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
+          else
+            echo "do_build=true" >> $GITHUB_OUTPUT
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
+
   build:
-    if: (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev_develop') || (github.event_name == 'workflow_dispatch' && github.event.inputs.version_to_deploy == '')
+    needs: resolve-version
+    if: needs.resolve-version.outputs.do_build == 'true'
     name: Build JAR
     runs-on: ubuntu-latest
     outputs:
@@ -151,24 +170,29 @@ jobs:
         id: get_version
         if: steps.version_check.outputs.build_required == 'true'
         run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
-  # Job “rollback” dummy
-  set-rollback-version:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.version_to_deploy != ''
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.set_version.outputs.version }}
-    steps:
-      - name: Set version from input
-        id: set_version
-        run: echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
 
+  final-version:
+    runs-on: ubuntu-latest
+    needs: [build, resolve-version]
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+    steps:
+      - name: Decide final version
+        id: set
+        run: |
+          if [ "${{ needs.resolve-version.outputs.do_build }}" = "false" ]; then
+            echo "version=${{ needs.resolve-version.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+  
   deploy-dev:
     name: Deploy to DEV Databricks
     runs-on: ubuntu-latest
-    needs: [build, set-rollback-version]
+    needs: final-version
     environment: dev
     outputs:
-      version: ${{ needs.build.outputs.version || needs.set-rollback-version.outputs.version }}
+      version: ${{ needs.final-version.outputs.version}}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_DEV_HOST }}
