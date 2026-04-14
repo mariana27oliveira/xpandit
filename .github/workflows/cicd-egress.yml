@@ -41,7 +41,6 @@ jobs:
 
   build:
     needs: resolve-version
-    if: needs.resolve-version.outputs.do_build == 'true'
     name: Build JAR
     runs-on: ubuntu-latest
     outputs:
@@ -57,7 +56,9 @@ jobs:
           else
             echo "build_required=false" >> $GITHUB_OUTPUT
             echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
-          fi
+            echo "Skipping Build step"
+            return;
+          fi          
       - name: Checkout
         uses: actions/checkout@v4
 
