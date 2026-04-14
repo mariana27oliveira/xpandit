@@ -247,7 +247,7 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.deploy-dev.outputs.version }}
     env:
       GIT_TOKEN: ${{ secrets.GIT_TOKEN }} #Token responsible for creating PR
     steps: 
@@ -314,7 +314,7 @@ jobs:
       contents: write
       pull-requests: read
     outputs:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.create-pr-to-master.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
@@ -418,7 +418,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.create-pr-to-master.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -429,7 +429,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.build.outputs.version}}
+          VERSION=${{needs.create-pr-to-master.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
@@ -443,7 +443,7 @@ jobs:
     needs: deploy-pre
     environment: pro
     outputs:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.deploy-pre.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
@@ -490,7 +490,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.build.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.deploy-pre.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -501,7 +501,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.build.outputs.version}}
+          VERSION=${{needs.deploy-pre.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
