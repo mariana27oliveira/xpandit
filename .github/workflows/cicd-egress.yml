@@ -21,14 +21,14 @@ permissions:
   packages: write
 
 jobs:
-  resolve-version:
+  version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set.outputs.version }}
       do_build: ${{ steps.set.outputs.do_build }}
 
     steps:
-      - name: Decide mode
+      - name: Decide mode (build vs rollback)
         id: set
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
@@ -40,29 +40,17 @@ jobs:
           fi
 
   build:
-    needs: resolve-version
-    name: Build JAR
+    needs: version
+    if: needs.version.outputs.do_build == 'true'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
 
-    steps:
-      - name: Determine version
-        id: version_check
-        run: |
-          if [ -z "${{ github.event.inputs.version_to_deploy }}" ]; then
-            echo "build_required=true" >> $GITHUB_OUTPUT
-            echo "version=" >> $GITHUB_OUTPUT
-          else
-            echo "build_required=false" >> $GITHUB_OUTPUT
-            echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
-          fi          
+    steps:     
       - name: Checkout
-        if: needs.resolve-version.outputs.do_build == true    
         uses: actions/checkout@v4
 
       - name: Set up Java
-        if: needs.resolve-version.outputs.do_build == true        
         uses: actions/setup-java@v4
         with:
           java-version: "17"
@@ -70,11 +58,9 @@ jobs:
           cache: "maven"
 
       - name: Build package
-        if: steps.version_check.outputs.build_required == 'true'
         run: mvn -B clean package -DskipTests
 
       - name: Set up Maven settings.xml
-        if: needs.resolve-version.outputs.do_build == true          
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml <<EOF
@@ -111,13 +97,11 @@ jobs:
           </settings>
           EOF
       - name: Publish JAR to GitHub Packages
-        if: needs.resolve-version.outputs.do_build == true          
         run: mvn deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       #- name: Cleanup old versions (keep 3 latest)
-        #if: needs.resolve-version.outputs.do_build == true          
         #uses: actions/github-script@v7
         #with:
           #github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -171,39 +155,32 @@ jobs:
             #console.log(`Kept versions: ${allVersions.slice(0,3).map(v => v.name).join(', ')}`);
 
       - name: Get project version
-        if: needs.resolve-version.outputs.do_build == true        
         id: get_version
         run: |
-          if [ "${{ needs.resolve-version.outputs.do_build }}" = "true" ]; then
-            echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
-          fi
+          echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
 
-  final-version:
+  resolve-final-version:
     runs-on: ubuntu-latest
-    needs: [build, resolve-version]
+    needs: [version, build]
     outputs:
       version: ${{ steps.set.outputs.version }}
     steps:
       - name: Decide final version
         id: set
         run: |
-          if [ "${{ needs.resolve-version.outputs.do_build }}" = "false" ]; then
-            echo "version=${{ needs.resolve-version.outputs.version }}" >> $GITHUB_OUTPUT
+          if [ "${{ needs.version.outputs.do_build }}" = "false" ]; then
+            echo "version=${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
           else
-            if [ -z "${{ needs.build.outputs.version }}" ]; then
-              echo "ERROR: build version missing" >&2
-              exit 1
-            fi
             echo "version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
           fi
   
   deploy-dev:
     name: Deploy to DEV Databricks
     runs-on: ubuntu-latest
-    needs: final-version
+    needs: resolve-final-version
     environment: dev
     outputs:
-      version: ${{ needs.final-version.outputs.version}}
+      version: ${{ needs.resolve-final-version.outputs.version}}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_DEV_HOST }}
@@ -250,7 +227,7 @@ jobs:
       - name: Download JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.resolve-final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit            
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -261,7 +238,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/dev/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.final-version.outputs.version}}
+          VERSION=${{needs.resolve-final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
@@ -277,7 +254,7 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      version: ${{ needs.final-version.outputs.version }}
+      version: ${{ needs.resolve-final-version.outputs.version }}
     env:
       GIT_TOKEN: ${{ secrets.GIT_TOKEN }} #Token responsible for creating PR
     steps: 
@@ -344,7 +321,7 @@ jobs:
       contents: write
       pull-requests: read
     outputs:
-      version: ${{ needs.final-version.outputs.version }}
+      version: ${{ needs.resolve-final-version.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRE_HOST }}
@@ -448,7 +425,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.resolve-final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -459,7 +436,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/pre/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.final-version.outputs.version}}
+          VERSION=${{needs.resolve-final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
@@ -473,7 +450,7 @@ jobs:
     needs: deploy-pre
     environment: pro
     outputs:
-      version: ${{ needs.final-version.outputs.version }}
+      version: ${{ needs.resolve-final-version.outputs.version }}
 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_PRO_HOST }}
@@ -520,7 +497,7 @@ jobs:
       - name: Download same JAR from GitHub Packages
         run: |
           mvn dependency:copy \
-            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.final-version.outputs.version }} \
+            -Dartifact=com.aegon.datalake:data-exporter-tool:${{ needs.resolve-final-version.outputs.version }} \
             -DoutputDirectory=target \
             -DremoteRepositories=github::default::https://maven.pkg.github.com/mariana27oliveira/xpandit
       #- run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -531,7 +508,7 @@ jobs:
           #cp config/*.properties deploy-config/ 2>/dev/null || true
           #databricks fs cp deploy-config/ dbfs:/FileStore/configs/prod/ --recursive --overwrite
       - run: |
-          VERSION=${{needs.final-version.outputs.version}}
+          VERSION=${{needs.resolve-final-version.outputs.version}}
           echo "Deploying version: ${VERSION}"
           #JAR_FILE=$(ls target/*.jar | head -n 1)
           #JAR_NAME=$(basename "$JAR_FILE")
