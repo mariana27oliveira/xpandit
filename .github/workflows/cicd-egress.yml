@@ -25,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set.outputs.version }}
-      do_build: ${{ steps.set.outputs.do_build }}
 
     steps:
       - name: Decide mode (build vs rollback)
@@ -34,14 +33,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
             MODE="ROLLBACK"
             VERSION="$${{ github.event.inputs.version_to_deploy }}"
-            DO_BUILD="false"
           else
             MODE="BUILD"
             VERSION=""
-            DO_BUILD="true"
           fi
 
-          echo "do_build=$DO_BUILD" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           echo "PIPELINE MODE: $MODE"
@@ -71,11 +67,11 @@ jobs:
           cache: "maven"
 
       - name: Build package
-        if: needs.version.outputs.do_build == 'true'      
+        if: needs.version.outputs.version == ''      
         run: mvn -B clean package -DskipTests
 
       - name: Set up Maven settings.xml
-        if: needs.version.outputs.do_build == 'true'            
+        if: needs.version.outputs.version == ''      
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml <<EOF
@@ -112,13 +108,13 @@ jobs:
           </settings>
           EOF
       - name: Publish JAR to GitHub Packages
-        if: needs.version.outputs.do_build == 'true'            
+        if: needs.version.outputs.version == ''      
         run: mvn deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       #- name: Cleanup old versions (keep 3 latest)
-        #if: needs.version.outputs.do_build == 'true'            
+        #if: needs.version.outputs.version == ''      
         #uses: actions/github-script@v7
         #with:
           #github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -174,12 +170,14 @@ jobs:
       - name: Get project version
         id: get_version
         run: |
-          if [ "${{ needs.version.outputs.do_build }}" = "false" ]; then
-            echo "version=${{ needs.version.outputs.version }}" >> $GITHUB_OUTPUT
+          if [ -z "${{ needs.version.outputs.version }}" ]; then
+            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           else
-            echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+            VERSION="${{ needs.version.outputs.version }}"
           fi
 
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Final Version: $VERSION"
   
   deploy-dev:
     name: Deploy to DEV Databricks
