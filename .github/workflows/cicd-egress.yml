@@ -32,12 +32,26 @@ jobs:
         id: set
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
-            echo "do_build=false" >> $GITHUB_OUTPUT
-            echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
+            MODE="ROLLBACK"
+            VERSION="$${{ github.event.inputs.version_to_deploy }}"
+            DO_BUILD="false"
           else
-            echo "do_build=true" >> $GITHUB_OUTPUT
-            echo "version=" >> $GITHUB_OUTPUT
+            MODE="BUILD"
+            VERSION=""
+            DO_BUILD="true"
           fi
+
+          echo "do_build=$DO_BUILD" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          echo "PIPELINE MODE: $MODE"
+          if [ "$MODE" = "ROLLBACK" ]; then
+            echo "Version to deploy: $VERSION"
+          else
+            echo "New version will be built"
+          fi
+
+          
 
   build:
     needs: version
