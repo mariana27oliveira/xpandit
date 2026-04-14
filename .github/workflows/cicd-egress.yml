@@ -32,7 +32,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_to_deploy }}" ]; then
             MODE="ROLLBACK"
-            VERSION="$${{ github.event.inputs.version_to_deploy }}"
+            VERSION="${{ github.event.inputs.version_to_deploy }}"
           else
             MODE="BUILD"
             VERSION=""
