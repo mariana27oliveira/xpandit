@@ -56,13 +56,13 @@ jobs:
           else
             echo "build_required=false" >> $GITHUB_OUTPUT
             echo "version=${{ github.event.inputs.version_to_deploy }}" >> $GITHUB_OUTPUT
-            echo "Skipping Build step"
-            return;
           fi          
       - name: Checkout
+        if: needs.resolve-version.outputs.do_build == true    
         uses: actions/checkout@v4
 
       - name: Set up Java
+        if: needs.resolve-version.outputs.do_build == true        
         uses: actions/setup-java@v4
         with:
           java-version: "17"
@@ -74,6 +74,7 @@ jobs:
         run: mvn -B clean package -DskipTests
 
       - name: Set up Maven settings.xml
+        if: needs.resolve-version.outputs.do_build == true          
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml <<EOF
@@ -110,11 +111,13 @@ jobs:
           </settings>
           EOF
       - name: Publish JAR to GitHub Packages
+        if: needs.resolve-version.outputs.do_build == true          
         run: mvn deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       #- name: Cleanup old versions (keep 3 latest)
+        #if: needs.resolve-version.outputs.do_build == true          
         #uses: actions/github-script@v7
         #with:
           #github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -168,6 +171,7 @@ jobs:
             #console.log(`Kept versions: ${allVersions.slice(0,3).map(v => v.name).join(', ')}`);
 
       - name: Get project version
+        if: needs.resolve-version.outputs.do_build == true        
         id: get_version
         run: |
           if [ "${{ needs.resolve-version.outputs.do_build }}" = "true" ]; then
