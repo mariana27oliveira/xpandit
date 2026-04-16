@@ -1,0 +1,125 @@
+name: Deploy DAGs
+ 
+on:
+  workflow_dispatch:
+ 
+jobs:
+ 
+  create-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+ 
+      - name: Create Pull Request to Master
+        id: create_pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: dev_master
+          branch: dev_develop
+          title: "Auto PR: dev_develop > dev_master"
+          body: "Automated PR"
+ 
+  wait-for-merge:
+    runs-on: ubuntu-latest
+    needs: create-pr
+    steps:
+      - name: Wait for PR merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ needs.create-pr.outputs.pr_number }};
+            let merged = false;
+ 
+            while (!merged) {
+              const { data: pr } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: prNumber,
+              });
+ 
+              if (pr.merged) {
+                merged = true;
+                console.log("PR merged!");
+              } else {
+                console.log("Waiting for merge...");
+                await new Promise(r => setTimeout(r, 30000));
+              }
+            }
+ 
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: wait-for-merge
+    environment: dev
+ 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+ 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+ 
+      - name: Upload DEV DAGs
+        run: |
+          az storage blob upload-batch \
+            --account-name storage_dev \
+            --destination airflow/dags \
+            --source ./dev \
+            --overwrite
+ 
+  deploy-pre:
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment: pre
+ 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+ 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+ 
+      - name: Upload PRE DAGs
+        run: |
+          az storage blob upload-batch \
+            --account-name storage_pre \
+            --destination airflow/dags \
+            --source ./pre \
+            --overwrite
+ 
+  deploy-pro:
+    runs-on: ubuntu-latest
+    needs: deploy-pre
+    environment: pro
+ 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+ 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+ 
+      - name: Upload PRO DAGs
+        run: |
+          az storage blob upload-batch \
+            --account-name storage_pro \
+            --destination airflow/dags \
+            --source ./pro \
+            --overwrite
