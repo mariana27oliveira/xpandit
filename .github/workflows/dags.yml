@@ -8,6 +8,7 @@ jobs:
   create-pr-to-master: #Creates PR to master if not exists
     name: Create PR to master
     runs-on: ubuntu-24.04
+    environment: master
     permissions:
       contents: write
       pull-requests: write
