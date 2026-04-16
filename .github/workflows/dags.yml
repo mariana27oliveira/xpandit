@@ -4,54 +4,139 @@ on:
   workflow_dispatch:
  
 jobs:
- 
-  create-pr:
-    runs-on: ubuntu-latest
-    outputs:
-      pr_number: ${{ steps.create_pr.outputs.pr_number }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
- 
-      - name: Create Pull Request to Master
-        id: create_pr
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: dev_master
-          branch: dev_develop
-          title: "Auto PR: dev_develop > dev_master"
-          body: "Automated PR"
- 
-  wait-for-merge:
-    runs-on: ubuntu-latest
-    needs: create-pr
-    steps:
-      - name: Wait for PR merge
+
+  create-pr-to-master: #Creates PR to master if not exists
+    name: Create PR to master
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GIT_TOKEN: ${{ secrets.GIT_TOKEN }} #Token responsible for creating PR
+    steps: 
+      - name: Check if PR exists
+        id: pr_check
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GIT_TOKEN }} #Token responsible for PR creation
           script: |
-            const prNumber = ${{ needs.create-pr.outputs.pr_number }};
-            let merged = false;
+            const source = "dev_develop";
+            const target = "dev_master";
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${source}`,
+              base: target
+            });
+            return prs.data.length > 0 ? prs.data[0].number : null
  
-            while (!merged) {
-              const { data: pr } = await github.rest.pulls.get({
-                ...context.repo,
-                pull_number: prNumber,
-              });
- 
-              if (pr.merged) {
-                merged = true;
-                console.log("PR merged!");
-              } else {
-                console.log("Waiting for merge...");
-                await new Promise(r => setTimeout(r, 30000));
-              }
+      - name: Create Pull Request if none exists #Creates PR with review request, if there are no commits (differences) skips this step
+        if: steps.pr_check.outputs.result == 'null'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GIT_TOKEN }} #Token responsible for PR creation
+          script: |
+            const source = "dev_develop";
+            const target = "dev_master";
+
+            const compare = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: target,
+              head: source
+            });
+            if (compare.data.total_commits === 0) {
+              core.info(`No new commits between ${source} and ${target}. Skipping PR creation.`);
+              return;
             }
+ 
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Automerge ${source} - ${target}`,
+              head: source,
+              base: target,
+              body: `Pull request created automatically by workflow. Requires approval.`
+            });
+            console.log(`PR created: ${pr.data.html_url}`);   
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              reviewers: ['']
+            });            
+            return pr.data.number
+            
+  merge-master:
+    name: Merge to Master
+    runs-on: ubuntu-latest
+    environment: master
+    needs: create-pr-to-master
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Validate PR dev_develop > dev_master
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const source = "dev_develop";
+            const target = "dev_master";
+       
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              head: `${context.repo.owner}:${source}`,
+              base: target
+            });
+       
+            if (prs.data.length === 0) {
+              core.setFailed("No PR found from dev_develop to dev_master.");
+              return;
+            }
+       
+            const pr = prs.data[0];
+       
+            // check merged
+            const isMerged = pr.state === "closed" && pr.merged_at !== null;
+       
+            // check approvals
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+       
+            const isApproved = reviews.data.some(r => r.state === "APPROVED");
+       
+            if (!isApproved && !isMerged) {
+              core.setFailed("PR is neither approved nor merged. Blocking deployment.");
+            } else {
+              core.info(`PR validation passed. Approved: ${isApproved}, Merged: ${isMerged}`);
+            }
+    
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev_master
+      - name: Configure Git #Personal infos necessary to merge and deploy
+        run: |
+          git config user.name "Mariana Oliveira" # USER
+          git config user.email "mariana.oliveira@aegonsantander.pt" #CHANGE USER
+ 
+      - name: Merge source into target #Merge code
+        run: |
+          git fetch origin dev_develop
+          git merge -X theirs origin/dev_develop --allow-unrelated-histories --no-edit
+          git push origin dev_master
  
   deploy-dev:
     runs-on: ubuntu-latest
-    needs: wait-for-merge
+    needs: merge-master
     environment: dev
  
     steps:
